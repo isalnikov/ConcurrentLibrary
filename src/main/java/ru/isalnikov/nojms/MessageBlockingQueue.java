@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  *
- * simple producer
+ * local broker by Id message
  */
 public class MessageBlockingQueue {
 
@@ -20,9 +20,9 @@ public class MessageBlockingQueue {
     /**
      * simple producer
      */
-    public void sendMessage() {
+    public void sendMessage(final String msg) {
         try {
-            boolean sent = queue.offer("msg", 10, TimeUnit.SECONDS);
+            boolean sent = queue.offer(msg, 10, TimeUnit.SECONDS);
 
         } catch (InterruptedException e) {
 
