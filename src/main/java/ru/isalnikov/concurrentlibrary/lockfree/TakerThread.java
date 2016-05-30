@@ -14,14 +14,16 @@ import java.util.concurrent.locks.LockSupport;
 public class TakerThread<T> extends Thread {
 
     private final AtomicReference<T> valueRef = new AtomicReference<>();
-    private final T [] results = (T[]) Array.newInstance(Object.class, 10);
-    
+    private final T[] results = (T[]) Array.newInstance(Object.class, 1);
+
     private final Sync sync = new Sync();
 
     public void updateValue(T newValue) {
-        valueRef.set(newValue);
+        T oldValue = valueRef.getAndSet(newValue);
         //LockSupport.unpark(this);
-        sync.release(0);
+        if (oldValue == null) {
+            sync.release(0);
+        }
     }
 
     public T removeValue() throws InterruptedException {
@@ -49,13 +51,12 @@ public class TakerThread<T> extends Thread {
     private T takeValue() throws InterruptedException {
         int arg = reserveResultSlot();
         sync.acquireInterruptibly(arg);
-        if(valueRef.get()!=null){
+        if (valueRef.get() != null) {
             sync.release(0);
-            
+
         }
-        
+
         return releaseResultSlot(arg);
-                
 
     }
 
@@ -67,22 +68,31 @@ public class TakerThread<T> extends Thread {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
+    /**
+     * wail queue impl for other cases
+     */
     private class Sync extends AbstractQueuedSynchronizer {
 
         @Override
         protected boolean tryAcquire(int arg) {
+            while (true) {
 
-            T oldValue = valueRef.get();
-            if (oldValue == null) {
-                return false;
-            }
-            if (!valueRef.compareAndSet(oldValue, null)) {
-                return false;
-            }
-            
-            results[arg] = oldValue;
-            return true;
+                T oldValue = valueRef.get();
+                if (oldValue == null) {
+                    return false;
+                }
 
+                if (hasQueuedPredecessors()) {
+                    return false; // be fair!
+                }
+                if (!valueRef.compareAndSet(oldValue, null)) {
+                    continue; //cas
+                }
+
+                results[arg] = oldValue;
+                return true;
+
+            }
         }
 
         @Override
