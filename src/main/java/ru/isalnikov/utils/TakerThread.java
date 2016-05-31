@@ -1,4 +1,4 @@
-package ru.isalnikov.concurrentlibrary.lockfree;
+package ru.isalnikov.utils;
 
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicReference;
